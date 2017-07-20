@@ -46,12 +46,16 @@ class HaveCakeProblem(Problem):
             for clause in action.precond_pos:
                 if clause not in kb.clauses:
                     is_possible = False
+                    break
             for clause in action.precond_neg:
                 if clause in kb.clauses:
                     is_possible = False
+                    break
             if is_possible:
                 possible_actions.append(action)
         return possible_actions
+
+        
 
     def result(self, state: str, action: Action):
         new_state = FluentState([], [])
