@@ -62,7 +62,7 @@ class AirCargoProblem(Problem):
             loads = []
             for a in self.airports:
                 for p in self.planes:
-                    for c in self.cargo:
+                    for c in self.cargos:
                         precond_pos = [expr("At({}, {})".format(p, a)),
                                        expr("At({}, {})".format(c, a)),
                                        ]
@@ -84,7 +84,7 @@ class AirCargoProblem(Problem):
             unloads = []
             for a in self.airports:
                 for p in self.planes:
-                    for c in self.cargo:
+                    for c in self.cargos:
                         precond_pos = [expr("At({}, {})".format(p, a)),
                                        expr("In({}, {})".format(c, p)),
                                        ]
@@ -94,10 +94,10 @@ class AirCargoProblem(Problem):
                         unload = Action(expr("Unload({}, {}, {})".format(c, p, a)),
                                      [precond_pos, precond_neg],
                                      [effect_add, effect_rem])
-                        loads.append(unload)
+                        unloads.append(unload)
 
-            return loads
             return unloads
+
 
         def fly_actions():
             """Create all concrete Fly actions and return a list
@@ -122,7 +122,7 @@ class AirCargoProblem(Problem):
 
         return load_actions() + unload_actions() + fly_actions()
 
-    def actions(self, state: str) -> list:
+    def actions(self, state: str):
         """ Return the actions that can be executed in the given state.
 
         :param state: str
@@ -158,11 +158,25 @@ class AirCargoProblem(Problem):
         :param action: Action applied
         :return: resulting state after action
         """
-        # TODO implement
         new_state = FluentState([], [])
+        old_state = decode_state(state, self.state_map)
+        for fluent in old_state.pos:
+            if fluent not in action.effect_rem:
+                new_state.pos.append(fluent)
+        for fluent in action.effect_add:
+            if fluent not in new_state.pos:
+                new_state.pos.append(fluent)
+        for fluent in old_state.neg:
+            if fluent not in action.effect_add:
+                new_state.neg.append(fluent)
+        for fluent in action.effect_rem:
+            if fluent not in new_state.neg:
+                new_state.neg.append(fluent)
         return encode_state(new_state, self.state_map)
 
-    def goal_test(self, state: str) -> bool:
+
+
+    def goal_test(self, state: str):
         """ Test the state to see if goal is reached
 
         :param state: str representing state
@@ -201,10 +215,16 @@ class AirCargoProblem(Problem):
         """
         # TODO implement (see Russell-Norvig Ed-3 10.2.3  or Russell-Norvig Ed-2 11.2)
         count = 0
+
+        kb = PropKB()
+        kb.tell(decode_state(node.state, self.state_map).pos_sentence())
+
+        for clause in self.goal:
+            if clause not in kb.clauses:
+                count += 1
         return count
 
-
-def air_cargo_p1() -> AirCargoProblem:
+def air_cargo_p1():
     cargos = ['C1', 'C2']
     planes = ['P1', 'P2']
     airports = ['JFK', 'SFO']
@@ -229,7 +249,7 @@ def air_cargo_p1() -> AirCargoProblem:
     return AirCargoProblem(cargos, planes, airports, init, goal)
 
 
-def air_cargo_p2() -> AirCargoProblem:
+def air_cargo_p2():
     cargos = ['C1', 'C2', 'C3']
     planes = ['P1', 'P2', 'P3']
     airports = ['JFK', 'SFO', 'ATL']
@@ -262,7 +282,7 @@ def air_cargo_p2() -> AirCargoProblem:
            expr('At(P1, ATL)'),
 
            expr('At(P2, SFO)'),
-           expr('At(P2, ATL)')
+           expr('At(P2, ATL)'),
 
            expr('At(P3, SFO)'),
            expr('At(P3, JFK)'),
@@ -276,7 +296,7 @@ def air_cargo_p2() -> AirCargoProblem:
 
 
 
-def air_cargo_p3() -> AirCargoProblem:
+def air_cargo_p3():
     cargos = ['C1', 'C2', 'C3', 'C4']
     planes = ['P1', 'P2']
     airports = ['JFK', 'SFO', 'ATL', 'ORD']
